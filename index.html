@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="耗材管控">
+<meta name="theme-color" content="#1a1a2e">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>救護耗材管控系統</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f4f6fa;--surface:#fff;--surface2:#f0f2f7;
+  --primary:#e63946;--primary-dark:#c1121f;
+  --text:#1a1a2e;--text2:#555b6e;--text3:#9299a8;
+  --border:#e2e6ef;--success:#2d9b5a;--warn:#e07b00;--danger:#c1121f;
+  --radius:12px;--radius-sm:8px;--shadow:0 2px 12px rgba(0,0,0,0.08);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px}
+#app{display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto;background:var(--bg)}
+
+/* Header */
+.header{background:var(--primary);color:#fff;padding:env(safe-area-inset-top,0) 16px 0;padding-top:calc(env(safe-area-inset-top,0px) + 12px);padding-bottom:12px}
+.header-inner{display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:17px;font-weight:600;letter-spacing:0.3px}
+.header-sub{font-size:11px;opacity:0.75;margin-top:1px}
+.export-btn{background:rgba(255,255,255,0.2);border:none;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer;font-weight:500}
+
+/* Bottom nav */
+.bottom-nav{display:flex;background:var(--surface);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom,0)}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 4px;border:none;background:transparent;color:var(--text3);font-size:10px;cursor:pointer;gap:3px;transition:color 0.15s}
+.nav-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-btn.active{color:var(--primary)}
+.nav-btn.active svg{stroke:var(--primary)}
+
+/* Scroll content */
+.content{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch}
+
+/* Panels */
+.panel{display:none}.panel.active{display:block}
+
+/* Summary cards */
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.sum-card{background:var(--surface);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+.sum-num{font-size:28px;font-weight:700;line-height:1}
+.sum-lbl{font-size:11px;color:var(--text2);margin-top:4px}
+.sum-card.warn .sum-num{color:var(--danger)}
+
+/* List cards */
+.list-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
+.list-card-title{font-size:13px;font-weight:600;color:var(--text2);padding:12px 14px 8px;border-bottom:1px solid var(--border)}
+.item-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border)}
+.item-row:last-child{border-bottom:none}
+.item-name{font-size:14px;font-weight:500}
+.item-meta{font-size:11px;color:var(--text3);margin-top:2px}
+.item-right{text-align:right}
+.item-qty{font-size:16px;font-weight:700}
+.item-unit{font-size:11px;color:var(--text3)}
+
+/* Badges */
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;margin-top:4px}
+.badge-ok{background:#e6f4ee;color:#2d9b5a}
+.badge-warn{background:#fff3e0;color:#e07b00}
+.badge-low{background:#fde8e8;color:#c1121f}
+
+/* Search */
+.search-wrap{position:relative;margin-bottom:12px}
+.search-wrap input{width:100%;padding:10px 14px 10px 36px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-size:14px;color:var(--text);outline:none}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3)}
+.search-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+
+/* Forms */
+.form-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+.form-title{font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.form-title svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px}
+.form-group input,.form-group select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;color:var(--text);background:var(--surface);outline:none;appearance:none;-webkit-appearance:none}
+.form-group input:focus,.form-group select:focus{border-color:var(--primary)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.submit-btn{width:100%;padding:13px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;letter-spacing:0.3px}
+.submit-btn:active{background:var(--primary-dark)}
+
+/* History */
+.hist-row{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);align-items:flex-start}
+.hist-row:last-child{border-bottom:none}
+.hist-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.hist-dot.in{background:#e6f4ee}
+.hist-dot.out{background:#fde8e8}
+.hist-dot svg{width:16px;height:16px;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.hist-dot.in svg{stroke:#2d9b5a}
+.hist-dot.out svg{stroke:#c1121f}
+.hist-info{flex:1;min-width:0}
+.hist-name{font-size:14px;font-weight:500}
+.hist-detail{font-size:11px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-right{text-align:right;flex-shrink:0}
+.hist-qty{font-size:14px;font-weight:600}
+.hist-qty.in{color:#2d9b5a}
+.hist-qty.out{color:#c1121f}
+.hist-time{font-size:10px;color:var(--text3);margin-top:2px}
+
+/* Toast */
+.toast{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 80px);left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a2e;color:#fff;padding:10px 20px;border-radius:999px;font-size:13px;font-weight:500;opacity:0;transition:all 0.25s;z-index:999;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Empty */
+.empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:14px}
+.empty svg{width:40px;height:40px;stroke:var(--border);fill:none;stroke-width:1.5;stroke-linecap:round;margin:0 auto 10px;display:block}
+
+/* Install banner */
+.install-banner{background:var(--primary);color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;gap:10px}
+.install-banner button{background:#fff;color:var(--primary);border:none;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.install-banner .close-x{background:none;border:none;color:#fff;font-size:18px;padding:0;cursor:pointer;line-height:1}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-inner">
+      <div>
+        <div class="header h1" style="font-size:17px;font-weight:600">🚑 救護耗材管控</div>
+        <div class="header-sub">Emergency Medical Supply System</div>
+      </div>
+      <button class="export-btn" onclick="exportCSV()">↓ 匯出報表</button>
+    </div>
+  </div>
+
+  <div id="install-banner" class="install-banner" style="display:none">
+    <span>📲 加到主畫面，像 APP 一樣使用！</span>
+    <button onclick="doInstall()">安裝</button>
+    <button class="close-x" onclick="document.getElementById('install-banner').style.display='none'">×</button>
+  </div>
+
+  <div class="content" id="main-content">
+
+    <!-- 庫存總覽 -->
+    <div id="panel-inventory" class="panel active">
+      <div class="summary-grid" id="summary-cards"></div>
+      <div class="list-card">
+        <div class="list-card-title">耗材庫存清單</div>
+        <div style="padding:10px 14px 4px">
+          <div class="search-wrap">
+            <span class="search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+            <input type="text" placeholder="搜尋耗材名稱…" oninput="renderInventory(this.value)" id="inv-search">
+          </div>
+        </div>
+        <div id="inventory-list"></div>
+      </div>
+    </div>
+
+    <!-- 入庫 -->
+    <div id="panel-in" class="panel">
+      <div class="form-card">
+        <div class="form-title">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          耗材入庫登記
+        </div>
+        <div class="form-group">
+          <label>選擇現有耗材</label>
+          <select id="in-select"><option value="">— 選擇耗材 —</option></select>
+        </div>
+        <div class="form-group">
+          <label>或輸入新耗材名稱</label>
+          <input type="text" id="in-newname" placeholder="新耗材名稱（選填）">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>入庫數量</label>
+            <input type="number" id="in-qty" value="1" min="1">
+          </div>
+          <div class="form-group">
+            <label>單位</label>
+            <input type="text" id="in-unit" placeholder="個/盒/支">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>效期（到期日）</label>
+            <input type="date" id="in-expire">
+          </div>
+          <div class="form-group">
+            <label>低庫存警示量</label>
+            <input type="number" id="in-threshold" value="5" min="1">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>備註（選填）</label>
+          <input type="text" id="in-note" placeholder="廠商、批號等">
+        </div>
+        <button class="submit-btn" onclick="submitIn()">✓ 確認入庫</button>
+      </div>
+    </div>
+
+    <!-- 領出 -->
+    <div id="panel-out" class="panel">
+      <div class="form-card">
+        <div class="form-title">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          耗材領出登記
+        </div>
+        <div class="form-group">
+          <label>耗材名稱</label>
+          <select id="out-select"><option value="">— 選擇耗材 —</option></select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>領出數量</label>
+            <input type="number" id="out-qty" value="1" min="1">
+          </div>
+          <div class="form-group">
+            <label>領用人</label>
+            <input type="text" id="out-person" placeholder="姓名">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>使用事由</label>
+          <input type="text" id="out-reason" placeholder="例：勤務出動、演練、補充救護包">
+        </div>
+        <div class="form-group">
+          <label>備註（選填）</label>
+          <input type="text" id="out-note" placeholder="">
+        </div>
+        <button class="submit-btn" onclick="submitOut()">✓ 確認領出</button>
+      </div>
+    </div>
+
+    <!-- 歷史 -->
+    <div id="panel-history" class="panel">
+      <div class="list-card">
+        <div class="list-card-title">所有異動紀錄</div>
+        <div style="padding:10px 14px 4px">
+          <div class="search-wrap">
+            <span class="search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+            <input type="text" placeholder="搜尋耗材或人員…" oninput="renderHistory(this.value)">
+          </div>
+        </div>
+        <div id="history-list"></div>
+      </div>
+    </div>
+
+  </div><!-- end content -->
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-inventory" onclick="switchTab('inventory')">
+      <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+      庫存
+    </button>
+    <button class="nav-btn" id="nav-in" onclick="switchTab('in')">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      入庫
+    </button>
+    <button class="nav-btn" id="nav-out" onclick="switchTab('out')">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      領出
+    </button>
+    <button class="nav-btn" id="nav-history" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      紀錄
+    </button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let items=JSON.parse(localStorage.getItem('ems_items')||'[]');
+let logs=JSON.parse(localStorage.getItem('ems_logs')||'[]');
+let deferredPrompt=null;
+
+if(!items.length){
+  items=[
+    {name:'彈性繃帶',qty:20,unit:'捲',expire:'2026-12-31',threshold:5},
+    {name:'三角巾',qty:15,unit:'條',expire:'2027-06-30',threshold:3},
+    {name:'口罩（醫療）',qty:100,unit:'個',expire:'2026-09-30',threshold:20},
+    {name:'手套（無菌）',qty:50,unit:'雙',expire:'2027-01-15',threshold:10},
+    {name:'OK繃',qty:8,unit:'盒',expire:'2027-03-01',threshold:5},
+    {name:'生理食鹽水',qty:4,unit:'瓶',expire:'2026-08-01',threshold:5},
+  ];
+  save();
+}
+
+function save(){
+  localStorage.setItem('ems_items',JSON.stringify(items));
+  localStorage.setItem('ems_logs',JSON.stringify(logs));
+}
+
+function switchTab(t){
+  ['inventory','in','out','history'].forEach(id=>{
+    document.getElementById('panel-'+id).classList.toggle('active',id===t);
+    document.getElementById('nav-'+id).classList.toggle('active',id===t);
+  });
+  if(t==='inventory'){renderSummary();renderInventory('');}
+  if(t==='in'){populateSel('in-select');document.getElementById('inv-search')&&(document.getElementById('inv-search').value='');}
+  if(t==='out'){populateSel('out-select');}
+  if(t==='history'){renderHistory('');}
+  document.getElementById('main-content').scrollTop=0;
+}
+
+function populateSel(id){
+  const s=document.getElementById(id);
+  s.innerHTML='<option value="">— 選擇耗材 —</option>';
+  items.forEach(it=>s.innerHTML+=`<option value="${it.name}">${it.name}（${it.qty}${it.unit}）</option>`);
+}
+
+function renderSummary(){
+  const today=new Date().toISOString().slice(0,10);
+  const near=new Date(Date.now()+30*864e5).toISOString().slice(0,10);
+  const low=items.filter(i=>i.qty<=i.threshold).length;
+  const exp=items.filter(i=>i.expire&&i.expire<today).length;
+  const nearExp=items.filter(i=>i.expire&&i.expire>=today&&i.expire<=near).length;
+  document.getElementById('summary-cards').innerHTML=`
+    <div class="sum-card"><div class="sum-num">${items.length}</div><div class="sum-lbl">耗材種類</div></div>
+    <div class="sum-card ${low?'warn':''}"><div class="sum-num">${low}</div><div class="sum-lbl">⚠ 低庫存警示</div></div>
+    <div class="sum-card ${exp?'warn':''}"><div class="sum-num">${exp}</div><div class="sum-lbl">⛔ 已過期</div></div>
+    <div class="sum-card ${nearExp?'warn':''}"><div class="sum-num">${nearExp}</div><div class="sum-lbl">⏰ 30天內到期</div></div>
+  `;
+}
+
+function renderInventory(q){
+  const today=new Date().toISOString().slice(0,10);
+  const near=new Date(Date.now()+30*864e5).toISOString().slice(0,10);
+  const list=items.filter(i=>!q||i.name.includes(q));
+  const el=document.getElementById('inventory-list');
+  if(!list.length){el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>沒有符合的耗材</div>';return;}
+  el.innerHTML=list.map(it=>{
+    let badge='',bc='';
+    if(it.expire&&it.expire<today){badge='已過期';bc='badge-low';}
+    else if(it.expire&&it.expire<=near){badge='即將到期';bc='badge-warn';}
+    else if(it.qty<=it.threshold){badge='低庫存';bc='badge-low';}
+    else{badge='正常';bc='badge-ok';}
+    return `<div class="item-row">
+      <div><div class="item-name">${it.name}</div><div class="item-meta">效期：${it.expire||'未設定'}</div>${badge?`<span class="badge ${bc}">${badge}</span>`:''}</div>
+      <div class="item-right"><div class="item-qty">${it.qty}</div><div class="item-unit">${it.unit}</div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderHistory(q){
+  const list=[...logs].reverse().filter(l=>!q||l.item.includes(q)||(l.person&&l.person.includes(q)));
+  const el=document.getElementById('history-list');
+  if(!list.length){el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>尚無紀錄</div>';return;}
+  const inIcon='<svg viewBox="0 0 24 24"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>';
+  const outIcon='<svg viewBox="0 0 24 24"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>';
+  el.innerHTML=list.map(l=>`
+    <div class="hist-row">
+      <div class="hist-dot ${l.type}">${l.type==='in'?inIcon:outIcon}</div>
+      <div class="hist-info">
+        <div class="hist-name">${l.item}</div>
+        <div class="hist-detail">${l.person?l.person+'・':''}${l.note||( l.type==='in'?'入庫':'領出')}</div>
+      </div>
+      <div class="hist-right">
+        <div class="hist-qty ${l.type}">${l.type==='in'?'+':'-'}${l.qty}${l.unit}</div>
+        <div class="hist-time">${l.time}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toast(msg,dur=2200){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+
+function submitIn(){
+  const name=document.getElementById('in-newname').value.trim()||document.getElementById('in-select').value;
+  const qty=parseInt(document.getElementById('in-qty').value)||0;
+  const unit=document.getElementById('in-unit').value.trim()||'個';
+  const expire=document.getElementById('in-expire').value;
+  const threshold=parseInt(document.getElementById('in-threshold').value)||5;
+  const note=document.getElementById('in-note').value.trim();
+  if(!name){toast('⚠ 請選擇或輸入耗材名稱');return;}
+  if(qty<=0){toast('⚠ 數量需大於 0');return;}
+  let it=items.find(i=>i.name===name);
+  if(it){it.qty+=qty;if(expire)it.expire=expire;it.threshold=threshold;}
+  else items.push({name,qty,unit,expire,threshold});
+  const now=new Date().toLocaleString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+  logs.push({time:now,type:'in',item:name,qty,unit,person:'',note});
+  save();
+  toast('✓ 入庫成功！');
+  ['in-select','in-newname','in-unit','in-expire','in-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('in-qty').value=1;
+  document.getElementById('in-threshold').value=5;
+}
+
+function submitOut(){
+  const name=document.getElementById('out-select').value;
+  const qty=parseInt(document.getElementById('out-qty').value)||0;
+  const person=document.getElementById('out-person').value.trim();
+  const reason=document.getElementById('out-reason').value.trim();
+  const note=document.getElementById('out-note').value.trim();
+  if(!name){toast('⚠ 請選擇耗材');return;}
+  if(!person){toast('⚠ 請填寫領用人姓名');return;}
+  if(qty<=0){toast('⚠ 數量需大於 0');return;}
+  const it=items.find(i=>i.name===name);
+  if(!it){toast('⚠ 找不到此耗材');return;}
+  if(it.qty<qty){toast(`⚠ 庫存不足（現有 ${it.qty}${it.unit}）`);return;}
+  it.qty-=qty;
+  const now=new Date().toLocaleString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+  logs.push({time:now,type:'out',item:name,qty,unit:it.unit,person,note:reason+(note?'，'+note:'')});
+  save();
+  if(it.qty<=it.threshold)toast(`⚠ 領出成功，${name} 已低於警示量（剩 ${it.qty}${it.unit}）`,3000);
+  else toast('✓ 領出成功！');
+  ['out-select','out-person','out-reason','out-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('out-qty').value=1;
+}
+
+function exportCSV(){
+  let csv='\uFEFF時間,類型,耗材,數量,單位,領用人,備註\n';
+  logs.forEach(l=>csv+=`"${l.time}","${l.type==='in'?'入庫':'領出'}","${l.item}","${l.qty}","${l.unit}","${l.person||''}","${l.note||''}"\n`);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='耗材紀錄_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  toast('✓ 報表匯出成功');
+}
+
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredPrompt=e;
+  document.getElementById('install-banner').style.display='flex';
+});
+
+function doInstall(){
+  if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(()=>{deferredPrompt=null;document.getElementById('install-banner').style.display='none';});}
+}
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+renderSummary();
+renderInventory('');
+</script>
+</body>
+</html>
