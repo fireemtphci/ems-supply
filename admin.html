@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>耗材管控 — 後台管理</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f6fa;--surface:#fff;
+  --primary:#e63946;--primary-dark:#c1121f;
+  --text:#1a1a2e;--text2:#555b6e;--text3:#9299a8;
+  --border:#e2e6ef;--success:#2d9b5a;--warn:#e07b00;--danger:#c1121f;
+  --radius:10px;--shadow:0 2px 12px rgba(0,0,0,0.07);
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh}
+.topbar{background:var(--primary);color:#fff;padding:14px 32px;display:flex;align-items:center;justify-content:space-between}
+.topbar h1{font-size:18px;font-weight:600}
+.topbar-sub{font-size:12px;opacity:0.75;margin-top:2px}
+.topbar-right{display:flex;gap:10px;align-items:center}
+.btn{padding:8px 18px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;border:none;font-family:inherit}
+.btn-white{background:#fff;color:var(--primary)}
+.btn-outline{background:transparent;border:1.5px solid rgba(255,255,255,0.5);color:#fff}
+.btn-green{background:var(--success);color:#fff}
+.btn-red{background:var(--danger);color:#fff;padding:5px 12px;font-size:12px}
+.btn-gray{background:#e2e6ef;color:var(--text);padding:5px 12px;font-size:12px}
+.btn-primary{background:var(--primary);color:#fff}
+.wrap{max-width:1100px;margin:0 auto;padding:28px 24px}
+.section{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:24px;overflow:hidden}
+.sec-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.sec-title{font-size:15px;font-weight:600}
+.sec-actions{display:flex;gap:8px}
+/* Table */
+table{width:100%;border-collapse:collapse}
+thead tr{background:#f8f9fc}
+th{text-align:left;padding:10px 14px;font-size:12px;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:0;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tr:hover{background:#fafbfd}
+td input,td select{width:100%;border:none;background:transparent;padding:10px 14px;font-size:13px;font-family:inherit;color:var(--text);outline:none}
+td input:focus,td select:focus{background:#fffbf0;outline:2px solid var(--warn) inset}
+td.actions{padding:6px 10px;width:80px;text-align:center}
+.del-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:6px}
+.del-btn:hover{background:#fde8e8;color:var(--danger)}
+/* Add row */
+.add-row-btn{display:flex;align-items:center;gap:6px;padding:12px 20px;color:var(--primary);font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;font-family:inherit;width:100%;border-top:1px solid var(--border)}
+.add-row-btn:hover{background:#fef2f3}
+/* Stats bar */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:var(--surface);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow)}
+.stat-num{font-size:26px;font-weight:700}
+.stat-lbl{font-size:11px;color:var(--text2);margin-top:3px}
+.stat-card.warn .stat-num{color:var(--danger)}
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:#1a1a2e;color:#fff;padding:11px 22px;border-radius:999px;font-size:13px;font-weight:500;opacity:0;transition:all 0.25s;pointer-events:none;z-index:999}
+.toast.show{opacity:1}
+/* Import/export bar */
+.toolbar{display:flex;gap:10px;align-items:center;padding:12px 20px;background:#f8f9fc;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.toolbar label{font-size:12px;color:var(--text2);font-weight:500}
+.hint{font-size:12px;color:var(--text3);padding:10px 20px;border-top:1px solid var(--border)}
+/* Badge */
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px}
+.badge-ok{background:#e6f4ee;color:#2d9b5a}
+.badge-warn{background:#fff3e0;color:#e07b00}
+.badge-low{background:#fde8e8;color:#c1121f}
+select.unit-sel{appearance:none;-webkit-appearance:none}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div style="font-size:13px;opacity:0.8">🚑 救護耗材管控系統</div>
+    <div style="font-size:18px;font-weight:600;margin-top:2px">後台管理 — 耗材編輯</div>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-outline" onclick="window.location='index.html'">← 回到 APP</button>
+    <button class="btn btn-white" onclick="saveAll()">💾 儲存所有變更</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="stats" id="stats"></div>
+
+  <div class="section">
+    <div class="sec-header">
+      <div class="sec-title">📦 耗材清單（直接在格子內編輯）</div>
+      <div class="sec-actions">
+        <button class="btn btn-gray" onclick="exportCSV()">↓ 匯出 CSV</button>
+        <button class="btn btn-green" onclick="saveAll()">💾 儲存</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <label>批次匯入 CSV：</label>
+      <input type="file" id="csv-file" accept=".csv" onchange="importCSV(this)" style="font-size:12px">
+      <button class="btn btn-gray" onclick="downloadTemplate()">↓ 下載範本</button>
+    </div>
+
+    <table id="items-table">
+      <thead>
+        <tr>
+          <th style="width:200px">耗材名稱</th>
+          <th style="width:80px">庫存數量</th>
+          <th style="width:80px">單位</th>
+          <th style="width:130px">效期（到期日）</th>
+          <th style="width:100px">低庫存警示量</th>
+          <th style="width:80px">狀態</th>
+          <th style="width:60px">刪除</th>
+        </tr>
+      </thead>
+      <tbody id="items-body"></tbody>
+    </table>
+
+    <button class="add-row-btn" onclick="addRow()">＋ 新增一列耗材</button>
+    <div class="hint">💡 提示：直接點格子即可編輯。編輯完成後記得按右上角「💾 儲存」，變更才會同步到 APP。</div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let items = JSON.parse(localStorage.getItem('ems_items') || '[]');
+
+if(!items.length){
+  items=[
+    {name:'彈性繃帶',qty:20,unit:'捲',expire:'2026-12-31',threshold:5},
+    {name:'三角巾',qty:15,unit:'條',expire:'2027-06-30',threshold:3},
+    {name:'口罩（醫療）',qty:100,unit:'個',expire:'2026-09-30',threshold:20},
+    {name:'手套（無菌）',qty:50,unit:'雙',expire:'2027-01-15',threshold:10},
+    {name:'OK繃',qty:8,unit:'盒',expire:'2027-03-01',threshold:5},
+    {name:'生理食鹽水',qty:4,unit:'瓶',expire:'2026-08-01',threshold:5},
+  ];
+  localStorage.setItem('ems_items', JSON.stringify(items));
+}
+
+function getStatus(it){
+  const today = new Date().toISOString().slice(0,10);
+  const near = new Date(Date.now()+30*864e5).toISOString().slice(0,10);
+  if(it.expire && it.expire < today) return ['已過期','badge-low'];
+  if(it.expire && it.expire <= near) return ['即將到期','badge-warn'];
+  if(it.qty <= it.threshold) return ['低庫存','badge-low'];
+  return ['正常','badge-ok'];
+}
+
+function renderStats(){
+  const today = new Date().toISOString().slice(0,10);
+  const near = new Date(Date.now()+30*864e5).toISOString().slice(0,10);
+  const low = items.filter(i=>i.qty<=i.threshold).length;
+  const exp = items.filter(i=>i.expire&&i.expire<today).length;
+  const nearExp = items.filter(i=>i.expire&&i.expire>=today&&i.expire<=near).length;
+  document.getElementById('stats').innerHTML=`
+    <div class="stat-card"><div class="stat-num">${items.length}</div><div class="stat-lbl">耗材種類</div></div>
+    <div class="stat-card ${low?'warn':''}"><div class="stat-num">${low}</div><div class="stat-lbl">⚠ 低庫存</div></div>
+    <div class="stat-card ${exp?'warn':''}"><div class="stat-num">${exp}</div><div class="stat-lbl">⛔ 已過期</div></div>
+    <div class="stat-card ${nearExp?'warn':''}"><div class="stat-num">${nearExp}</div><div class="stat-lbl">⏰ 30天內到期</div></div>
+  `;
+}
+
+function renderTable(){
+  const tbody = document.getElementById('items-body');
+  tbody.innerHTML = items.map((it,i)=>{
+    const [st,sc] = getStatus(it);
+    return `<tr id="row-${i}">
+      <td><input type="text" value="${it.name}" onchange="items[${i}].name=this.value;renderStats()" placeholder="耗材名稱"></td>
+      <td><input type="number" value="${it.qty}" min="0" onchange="items[${i}].qty=parseInt(this.value)||0;renderStats()"></td>
+      <td><input type="text" value="${it.unit}" onchange="items[${i}].unit=this.value" placeholder="個/盒/支"></td>
+      <td><input type="date" value="${it.expire||''}" onchange="items[${i}].expire=this.value;renderStats()"></td>
+      <td><input type="number" value="${it.threshold||5}" min="1" onchange="items[${i}].threshold=parseInt(this.value)||5;renderStats()"></td>
+      <td style="padding:10px 14px"><span class="badge ${sc}">${st}</span></td>
+      <td class="actions"><button class="del-btn" onclick="deleteRow(${i})" title="刪除">🗑</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function addRow(){
+  items.push({name:'',qty:0,unit:'個',expire:'',threshold:5});
+  renderTable();
+  renderStats();
+  // focus new row
+  const rows = document.querySelectorAll('#items-body tr');
+  if(rows.length) rows[rows.length-1].querySelector('input').focus();
+}
+
+function deleteRow(i){
+  if(!confirm(`確定要刪除「${items[i].name||'此耗材'}」？`)) return;
+  items.splice(i,1);
+  renderTable();
+  renderStats();
+  toast('已刪除');
+}
+
+function saveAll(){
+  // collect latest values from inputs
+  document.querySelectorAll('#items-body tr').forEach((tr,i)=>{
+    const inputs = tr.querySelectorAll('input');
+    if(items[i]){
+      items[i].name = inputs[0].value.trim();
+      items[i].qty = parseInt(inputs[1].value)||0;
+      items[i].unit = inputs[2].value.trim()||'個';
+      items[i].expire = inputs[3].value;
+      items[i].threshold = parseInt(inputs[4].value)||5;
+    }
+  });
+  items = items.filter(i=>i.name); // remove empty rows
+  localStorage.setItem('ems_items', JSON.stringify(items));
+  renderTable();
+  renderStats();
+  toast('✓ 儲存成功！APP 已同步更新');
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function exportCSV(){
+  let csv = '\uFEFF耗材名稱,庫存數量,單位,效期,低庫存警示量\n';
+  items.forEach(it=>csv+=`"${it.name}","${it.qty}","${it.unit}","${it.expire||''}","${it.threshold}"\n`);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download = '耗材清單_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  toast('✓ 已匯出 CSV');
+}
+
+function downloadTemplate(){
+  const csv = '\uFEFF耗材名稱,庫存數量,單位,效期,低庫存警示量\n彈性繃帶,20,捲,2026-12-31,5\n三角巾,15,條,2027-06-30,3\n';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download = '耗材匯入範本.csv';
+  a.click();
+}
+
+function importCSV(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.split('\n').filter(l=>l.trim());
+    const newItems = [];
+    lines.slice(1).forEach(line=>{
+      const cols = line.split(',').map(c=>c.replace(/^"|"$/g,'').trim());
+      if(!cols[0]) return;
+      newItems.push({
+        name: cols[0],
+        qty: parseInt(cols[1])||0,
+        unit: cols[2]||'個',
+        expire: cols[3]||'',
+        threshold: parseInt(cols[4])||5
+      });
+    });
+    if(!newItems.length){toast('⚠ 找不到有效資料，請確認格式');return;}
+    if(confirm(`匯入 ${newItems.length} 筆耗材？\n（選「確定」將新增到現有清單，不會刪除原有資料）`)){
+      // merge: if same name, update; else add
+      newItems.forEach(ni=>{
+        const exist = items.find(i=>i.name===ni.name);
+        if(exist){ exist.qty=ni.qty; exist.unit=ni.unit; exist.expire=ni.expire; exist.threshold=ni.threshold; }
+        else items.push(ni);
+      });
+      renderTable(); renderStats();
+      toast(`✓ 已匯入 ${newItems.length} 筆，記得按儲存！`);
+    }
+    input.value='';
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+renderStats();
+renderTable();
+</script>
+</body>
+</html>
